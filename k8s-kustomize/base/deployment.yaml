@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: currency-converter
-        image: 626635399726.dkr.ecr.us-east-2.amazonaws.com/argocd/apps:v1
+        image: 538153606685.dkr.ecr.us-east-1.amazonaws.com/currency_converter:v1
         ports:
         - containerPort: 5555
         env:
