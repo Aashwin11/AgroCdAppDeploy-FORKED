@@ -13,7 +13,7 @@ spec:
   ingressClassName: alb
   rules:
     # Rule for ArgoCD Server
-    - host: argocd.theutility.shop
+    - host: argocd.trialphase.shop
       http:
         paths:
           - path: /

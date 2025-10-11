@@ -12,7 +12,7 @@ spec:
   ingressClassName: alb
   rules:
     # Rule for the Currency Converter Application
-    - host: app.theutility.shop
+    - host: app.trialphase.shop
       http:
         paths:
           - path: /
