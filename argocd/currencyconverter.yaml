@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/akshayghosh30/AgroCdAppDeploy.git'
-    targetRevision: applicationsetup
+    targetRevision: applicationsetup-Aniket
     path: k8s-kustomize/overlays/production
 
   destination:
@@ -17,3 +17,4 @@ spec:
     automated:
       selfHeal: true
       prune: true
+

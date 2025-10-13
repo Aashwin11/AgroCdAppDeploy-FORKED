@@ -11,7 +11,7 @@ patches:
 - patch: |-
     - op: replace
       path: /spec/rules/0/host      # The only rule is at index 0
-      value: app.theutility.shop # Set the correct hostname
+      value: app.trialphase.shop # Set the correct hostname
   target:
     kind: Ingress
     name: app-main-ingress

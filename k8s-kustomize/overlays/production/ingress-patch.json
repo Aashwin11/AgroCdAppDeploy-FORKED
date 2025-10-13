@@ -2,6 +2,6 @@
   {
     "op": "replace",
     "path": "/spec/rules/1/host",
-    "value": "app.theutility.shop"
+    "value": "app.trialphase.shop"
   }
 ]
