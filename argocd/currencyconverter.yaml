@@ -7,8 +7,8 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/Aashwin11/AgroCdAppDeploy-FORKED.git'
-    targetRevision: applicationsetup-Aniket
-    path: k8s-kustomize/overlays/production
+    targetRevision: applicationsetup-Aniket-BG
+    path: k8s-kustomize/overlays/production/blue
 
   destination:
     server: 'https://kubernetes.default.svc'
