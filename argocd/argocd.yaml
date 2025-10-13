@@ -6,11 +6,8 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: 'https://github.com/akshayghosh30/AgroCdAppDeploy.git'
+    repoURL: 'https://github.com/Aashwin11/AgroCdAppDeploy-FORKED.git'
     targetRevision: applicationsetup-Aniket
-
-
-    
 #Branch tag is not needed. The TargetRevision decides the branch being used.
     path: argocd
   destination:
