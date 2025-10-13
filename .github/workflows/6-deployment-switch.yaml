@@ -1,0 +1,99 @@
+name: '6-Flip Production Deployment (Blue/Green)'
+
+on:
+  workflow_dispatch:
+
+jobs:
+  flip-color:
+    runs-on: ubuntu-latest
+    steps:
+#Make sure to create a PAT (PErsonal Access Toekn) and save the value in  Secrets as REPO_PAT
+    #-------------------------------------------------------------------------------------------------------------------------------------
+      # --------------------------------Step 1: Check out the repository's code---------------------------
+      # We use a PAT here so we have permission to push changes back
+      - name: 1.Check out repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.REPO_PAT }}
+          ref: 'applicationsetup-Aniket-BG' # NOTE:--> Ensure it checks out the correct branch
+      #-------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+      #-------------------------------------------------------------------------------------------------------------------------------------
+      # -------------------------------------Step 2: The core logic to flip the deployment color-----------------------------
+      - name: 2.Find current color and flip it
+        id: flip
+        run: |
+          # The file we need to modify
+          FILE_PATH="argocd/currencyconverter.yaml"
+          
+          echo "=========================================="
+          echo "🔍 Checking current deployment color in: $FILE_PATH"
+          echo "=========================================="
+          
+          # Check if the path currently points to 'blue'
+          if grep -q 'production/blue' "$FILE_PATH"; then
+            CURRENT_COLOR="BLUE"
+            NEW_COLOR="GREEN"
+            echo "🎨 Current color is BLUE. Flipping to GREEN."
+            # Use sed to replace 'blue' with 'green' in the file
+            sed -i 's|production/blue|production/green|' "$FILE_PATH"
+          
+          # Check if the path currently points to 'green'
+          elif grep -q 'production/green' "$FILE_PATH"; then
+            CURRENT_COLOR="GREEN"
+            NEW_COLOR="BLUE"
+            echo "🎨 Current color is GREEN. Flipping to BLUE."
+            # Use sed to replace 'green' with 'blue' in the file
+            sed -i 's|production/green|production/blue|' "$FILE_PATH"
+          
+          # Handle cases where the path is something unexpected
+          else
+            echo "❌ Error: Could not determine current color or path is invalid."
+            exit 1
+          fi
+          
+          # Set outputs for the next steps
+          echo "new_color=$NEW_COLOR" >> $GITHUB_OUTPUT
+          echo "=========================================="
+          echo "✅ File updated to point to the $NEW_COLOR deployment."
+          echo "=========================================="
+      #-------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+
+      #-------------------------------------------------------------------------------------------------------------------------------------
+
+
+      
+      # ------------------------------Step 3: Commit and push the changes back to the repository------------------------------
+      - name: Commit and push changes
+        run: |
+          echo "=========================================="
+          echo "🚀 Committing and pushing changes..."
+          echo "=========================================="
+          
+          # Configure git with a user name and email
+          git config --global user.name "GitHub Actions Flip Bot"
+          git config --global user.email "actions@github.com"
+          
+          # Add the modified file to the staging area
+          git add argocd/currencyconverter.yaml
+          
+          # Commit the changes with a descriptive message
+          git commit -m "Automated Flip: Switched production deployment to ${{ steps.flip.outputs.new_color }}"
+          
+          # Push the commit to the branch
+          git push
+          
+          echo "✅ Successfully pushed changes to trigger ArgoCD sync."
+          echo "=========================================="
+
+      #-------------------------------------------------------------------------------------------------------------------------------------
