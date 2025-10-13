@@ -1,0 +1,13 @@
+# SAME AS BLUE HERE < BECAUSE NO CHANGES IN THE ENV , it will be in production only for flask
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency-converter
+spec:
+  template:
+    spec:
+      containers:
+        - name: currency-converter
+          env:
+            - name: FLASK_ENV
+              value: "production"

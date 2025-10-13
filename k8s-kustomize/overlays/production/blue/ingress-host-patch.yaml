@@ -1,0 +1,7 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-main-ingress
+spec:
+  rules:
+  - host: app.trialphase.shop

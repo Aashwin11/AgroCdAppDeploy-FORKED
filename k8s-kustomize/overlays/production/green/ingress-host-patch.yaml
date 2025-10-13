@@ -1,0 +1,8 @@
+# SAME AS BLUE HERE < BECAUSE NO CHANGES IN THE URL , it will be exposed to  SAME URL
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: app-main-ingress
+spec:
+  rules:
+  - host: app.trialphase.shop

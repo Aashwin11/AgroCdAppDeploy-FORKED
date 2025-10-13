@@ -1,0 +1,13 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: currency-converter
+spec:
+  template:
+    metadata:
+      labels:
+        version: blue # <--  This pod is now 'blue'
+    spec:
+      containers:
+      - name: currency-converter
+        image: 538153606685.dkr.ecr.us-east-1.amazonaws.com/currency_converter:v1
