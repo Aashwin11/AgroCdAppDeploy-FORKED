@@ -1,8 +1,20 @@
-# SAME AS BLUE HERE < BECAUSE NO CHANGES IN THE URL , it will be exposed to  SAME URL
+# k8s-kustomize/overlays/production/blue/ingress-host-patch.yaml
+
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
+  # This targets the correct Ingress from your base
   name: app-main-ingress
 spec:
   rules:
-  - host: app.trialphase.shop
+    # This provides the COMPLETE and VALID rule to overwrite the base rule
+    - host: app.trialphase.shop
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: currency-converter-service
+                port:
+                  number: 80
