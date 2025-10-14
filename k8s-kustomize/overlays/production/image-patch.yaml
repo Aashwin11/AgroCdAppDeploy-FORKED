@@ -1,12 +1,9 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
 metadata:
   name: currency-converter
 spec:
   template:
-    metadata:
-      labels:
-        version: blue # <--  This pod is now 'blue'
     spec:
       containers:
       - name: currency-converter

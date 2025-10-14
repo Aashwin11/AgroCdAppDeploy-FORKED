@@ -1,0 +1,81 @@
+# .github/workflows/promote-rollout.yml
+
+name: 'Promote Production Rollout'
+
+on:
+  workflow_dispatch:
+    inputs:
+      rollout_name:
+        description: 'Name of the Rollout to promote'
+        required: true
+        default: 'currency-converter'
+      namespace:
+        description: 'Namespace of the Rollout'
+        required: true
+        default: 'default'
+
+jobs:
+  promote:
+    name: 'Promote Rollout to Active'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+
+#-------------------------------------------------------------------------------------------------------------------------------
+# 1. Checkout Code 
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.aws_region }}
+#-------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+#-------------------------------------------------------------------------------------------------------------------------------
+# 2.Install Argo Rollouts kubectl plugin
+      - name: Install Argo Rollouts kubectl plugin
+        run: |
+          echo "=========================================="
+          echo "Installing Argo Rollouts CLI"
+          echo "=========================================="
+          curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x ./kubectl-argo-rollouts-linux-amd64
+          sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+          echo "Argo Rollouts CLI installed"
+          echo "=========================================="
+#-------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+#-------------------------------------------------------------------------------------------------------------------------------
+# 3.Update-kubeconfig
+      - name: Connect to EKS Cluster
+        run: |
+          aws eks update-kubeconfig --region ${{ github.event.inputs.aws_region }} --name ${{ github.event.inputs.cluster_name }}
+          echo "Kubeconfig updated."
+#-------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+#-------------------------------------------------------------------------------------------------------------------------------
+# 2.Promote Rollout
+
+      - name: Promote the Rollout
+        run: |
+          echo "=========================================="
+          echo "Promoting Rollout: ${{ github.event.inputs.rollout_name }} in namespace: ${{ github.event.inputs.namespace }}"
+          echo "=========================================="
+          kubectl argo rollouts promote ${{ github.event.inputs.rollout_name }} -n ${{ github.event.inputs.namespace }}
+          echo "✅ Promotion command sent."
+          echo "=========================================="

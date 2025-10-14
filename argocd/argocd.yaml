@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: 'https://github.com/Aashwin11/AgroCdAppDeploy-FORKED.git'
-    targetRevision: applicationsetup-Aniket-BG
+    targetRevision: applicationsetup-Aniket-ArgoRollout-BG
 #Branch tag is not needed. The TargetRevision decides the branch being used.
     path: argocd
   destination:

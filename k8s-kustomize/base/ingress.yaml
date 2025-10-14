@@ -6,7 +6,7 @@ metadata:
   annotations:
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
-    alb.ingress.kubernetes.io/group.name: shared-ingress-group # This is the magic key
+    alb.ingress.kubernetes.io/group.name: shared-ingress-group 
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
 spec:
   ingressClassName: alb
@@ -19,6 +19,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: currency-converter-service
+                name: currency-converter-active-svc #<------ CHange is here, we need to make sure that 
+                                                    #currency-converter-active-svc points to --> app.trialphase.shop 
                 port:
                   number: 80

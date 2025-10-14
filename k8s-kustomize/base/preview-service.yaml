@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency-converter-preview-svc
+spec:
+  ports:
+  - port: 80
+    targetPort: 5555
+    protocol: TCP
+  selector:
+    app: currency-converter
+
+# Same as active service - only the metadata name changes

@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: currency-converter-active-svc
+spec:
+  ports:
+  - port: 80
+    targetPort: 5555
+    protocol: TCP
+  selector:
+    app: currency-converter
+    # NOTE: here, the Rollout controller manages the selector 

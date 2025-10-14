@@ -1,13 +1,15 @@
-apiVersion: apps/v1
-kind: Deployment
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+
+#------ General Deployment.yaml :what you want to deploy [SAME AS BEFORE]
 metadata:
   name: currency-converter
 spec:
-  replicas: 1
+  replicas: 1 
   selector:
     matchLabels:
       app: currency-converter
-  template:
+  template: 
     metadata:
       labels:
         app: currency-converter
@@ -26,4 +28,15 @@ spec:
         - name: APIHOST
           value: "currency-conversion-and-exchange-rates.p.rapidapi.com"
         - name: FLASK_ENV
-          value: "development"
+          value: "development" # Default env
+
+
+  # --- ArgoRollout : how you want to deploy ---
+  strategy:
+    blueGreen: 
+      # The service for live traffic
+      activeService: currency-converter-active-svc
+      # The service for internal QA testing
+      previewService: currency-converter-preview-svc
+      # Pause the rollout for manual promotion
+      autoPromotionEnabled: false
