@@ -7,4 +7,4 @@ spec:
     spec:
       containers:
       - name: currency-converter
-        image: 538153606685.dkr.ecr.us-east-1.amazonaws.com/currencyconverter:v2
+        image: 538153606685.dkr.ecr.us-east-1.amazonaws.com/currencyconverter:v1
