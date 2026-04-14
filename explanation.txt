@@ -1,0 +1,254 @@
+Project Name: AgroCdAppDeploy
+Branch: applicationsetup-Aniket-ArgoRollout-BG
+
+1. Project Overview
+-------------------
+This repository implements a complete end-to-end DevOps deployment pipeline for a Python-based currency converter service. The work in this branch focuses on infrastructure automation, Kubernetes deployment architecture, GitOps application delivery, service exposure through AWS networking, and robust CI/CD automation using GitHub Actions.
+
+The core objective is to demonstrate a professional DevOps implementation, not to develop the application itself. The currency converter application is a deployable Python web service with a user interface, and it exists here as the service target. The primary engineering value is in provisioning AWS resources, managing EKS, deploying Kubernetes workloads, and automating the full lifecycle.
+
+The architecture is designed for Skaffold + ArgoCD synergy: Skaffold supports fast local image build and deployment loops, and ArgoCD provides production-grade GitOps reconciliation and continuous deployment.
+
+
+2. Infrastructure Automation
+----------------------------
+Infrastructure is defined in the `infrastructure/` directory using Terraform.
+
+Key elements:
+- AWS VPC with public and private subnets.
+- Internet Gateway for outbound internet access.
+- NAT Gateway to allow private subnet nodes to access external APIs securely.
+- Route tables and subnet associations for both public and private traffic.
+- AWS EKS cluster deployed into private subnets.
+- Managed EKS worker node group with autoscaling configuration.
+- IAM roles for the cluster control plane and worker nodes.
+
+Important design details:
+- The infrastructure code uses Terraform providers for AWS, Kubernetes, and Helm.
+- EKS cluster authentication is configured through the AWS IAM provider and the Kubernetes provider uses `aws eks get-token` to authenticate to the cluster.
+- The EKS cluster is created with `bootstrap_cluster_creator_admin_permissions = true`.
+- A `kubernetes_config_map_v1` resource is used to update the `aws-auth` ConfigMap and grant admin rights to the IAM entity that created the cluster. This ensures cluster creator authorization is not lost.
+
+Terraform supports remote state using S3 and DynamoDB locking. The backend config is injected by GitHub Actions workflows.
+
+
+3. Kubernetes Deployment Architecture
+--------------------------------------
+The application deployment is built with Kustomize in `k8s-kustomize/`.
+
+Base resources define the essential application stack:
+- `rollout.yaml`: an Argo Rollouts `Rollout` resource for blue/green deployment.
+- `active-service.yaml`: the live production service that receives active traffic.
+- `preview-service.yaml`: the preview service used for testing new versions before promotion.
+- `ingress.yaml`: a network ingress resource for production traffic.
+- `preview-ingress.yaml`: an ingress resource for preview/testing traffic.
+- `secret.yaml`: stores API credentials used by the currency service.
+
+The base Kustomize configuration includes all of these resources and is intentionally designed for progressive delivery:
+- Active and preview services separate traffic streams.
+- A blue/green rollout strategy is declared.
+- The `Rollout` strategy is configured with `autoPromotionEnabled: false`, requiring explicit promotion for production switch-over.
+
+This branch uses a service mesh pattern with separate active/preview network paths, enabling safe application promotion and validation.
+
+
+4. Environment Overlays and Image Management
+---------------------------------------------
+The repo uses environment overlays to manage deployment differences.
+
+Production overlay:
+- `k8s-kustomize/overlays/production/kustomization.yaml`
+- `k8s-kustomize/overlays/production/image-patch.yaml`
+
+This overlay patches the base `Rollout` resource to use a production container image hosted in Amazon ECR: `538153606685.dkr.ecr.us-east-1.amazonaws.com/currencyconverter:v1`.
+
+Development overlay:
+- `k8s-kustomize/overlays/development/kustomization.yaml`
+
+It patches the shared ingress hostnames to development-specific hosts such as `argocd.theutility.shop` and `application.theutility.shop`.
+
+This structure separates application manifest intent from environment-specific details, which is a core DevOps best practice.
+
+
+5. GitOps with ArgoCD
+---------------------
+ArgoCD declarative application delivery is defined in `argocd/`.
+
+Key ArgoCD manifests:
+- `argocd/argocd.yaml`: a self-managed ArgoCD application that tracks the repository path `argocd`.
+- `argocd/currencyconverter.yaml`: an ArgoCD application that deploys the production rollout from `k8s-kustomize/overlays/production` into the cluster.
+
+Both applications use automated sync with `selfHeal: true` and `prune: true`.
+- `selfHeal` ensures that if a resource drifts from the declared Git state, ArgoCD automatically restores it.
+- `prune` ensures that removed resources are destroyed when the manifest no longer includes them.
+
+This provides a fully declarative GitOps model: the Git repository is the single source of truth, and ArgoCD continuously reconciles cluster state with the repo.
+
+
+6. AWS Network Exposure and Ingress
+-------------------------------------
+The branch includes AWS ALB ingress configuration for ArgoCD exposure.
+
+Files:
+- `kubernetes-manifests/argocd-ingress.yaml`
+
+The ingress uses the AWS Load Balancer Controller via annotations:
+- `alb.ingress.kubernetes.io/scheme: internet-facing`
+- `alb.ingress.kubernetes.io/target-type: ip`
+- `ingressClassName: alb`
+
+This ensures ArgoCD can be reached from the internet through an Application Load Balancer provisioned by the Kubernetes ALB controller.
+
+The preview ingress for the app is also configured with ALB annotations and a unique host name: `appdev.trialphase.shop`.
+
+
+7. CI/CD Automation with GitHub Actions
+----------------------------------------
+The repository uses GitHub Actions to automate infrastructure lifecycle, application deployment, cleanup, rollout promotion, and state management.
+
+Workflows included:
+- `.github/workflows/1-terraform-infra.yml`
+- `.github/workflows/2-apply-to-eks.yml`
+- `.github/workflows/3-remove-from-eks.yml`
+- `.github/workflows/5-terraform-statelock.yaml`
+- `.github/workflows/6-deployment-switch.yaml`
+- `.github/workflows/7-promote-rollout.yaml`
+- `.github/workflows/test-workflow.yaml`
+
+### 1. Terraform infrastructure workflow
+This workflow provisions or destroys AWS infrastructure.
+- Accepts inputs for action (`apply` or `destroy`), AWS region, project name, instance types, cluster version, S3 bucket, and DynamoDB lock table.
+- Configures AWS credentials from GitHub secrets.
+- Initializes Terraform with remote state backend config.
+- Generates `my-vars.tfvars.json` dynamically.
+- Validates Terraform and applies or destroys infrastructure.
+
+This makes infrastructure provisioning repeatable and controlled through the CI/CD pipeline.
+
+### 2. Deploy to EKS workflow
+This workflow performs the cluster-level deployment.
+- Installs `eksctl` to manage EKS authentication and IRSA setup.
+- Updates `kubectl` kubeconfig to connect to the target cluster.
+- Ensures the AWS Load Balancer Controller IAM policy exists.
+- Associates the EKS cluster with an OIDC provider.
+- Creates an IAM Service Account for the ALB controller using IRSA.
+- Installs Argo Rollouts CLI and controller.
+- Installs the AWS Load Balancer Controller Helm chart.
+- Installs ArgoCD via Helm.
+- Applies the ArgoCD ingress manifest.
+- Applies the ArgoCD application manifests.
+- Waits for ALB hostname readiness and prints ArgoCD admin credentials.
+
+This workflow makes Kubernetes deployment operationally reproducible and fully automated.
+
+### 3. Destroy apps workflow
+This workflow cleans application-level resources from the cluster.
+- Updates kubeconfig.
+- Uninstalls ArgoCD Helm chart.
+- Uninstalls AWS Load Balancer Controller Helm chart.
+- Detaches the ALB IAM policy from the node role.
+
+This allows application teardown independent of infrastructure teardown.
+
+### 5. Terraform unlock workflow
+A manual workflow to force-unlock Terraform state.
+- Configures remote state backend.
+- Runs `terraform force-unlock` against a lock ID.
+
+This is essential for handling stuck state locks in a collaborative or CI environment.
+
+### 6. Blue/Green deployment switch workflow
+This workflow automates production traffic flip logic.
+- Checks out the repository using a personal access token.
+- Reads and modifies `argocd/currencyconverter.yaml` to swap deployment target paths.
+- Commits and pushes the change back to Git.
+- This effectively triggers ArgoCD to switch production traffic.
+
+The blue/green switch capability is implemented through GitOps: branch changes to the ArgoCD application path are the release mechanism.
+
+### 7. Argo Rollouts promotion workflow
+This workflow promotes a rollout after preview validation.
+- Installs the Argo Rollouts CLI.
+- Updates kubeconfig.
+- Runs `kubectl argo rollouts promote <rollout_name> -n <namespace>`.
+
+This provides a controlled manual promotion step that fits the blue/green release model.
+
+### Test workflow
+A lighter validation workflow that verifies EKS connectivity and ingress status.
+- Connects to the EKS cluster.
+- Checks the ArgoCD and default namespace ingresses.
+- Validates the ALB hostname attachment.
+
+This workflow helps confirm deployment health after automation runs.
+
+
+8. Branch-specific rollout architecture
+----------------------------------------
+This branch advances the deployment model with Argo Rollouts and blue/green capabilities.
+
+The base application manifest is now a `Rollout` resource instead of a standard Kubernetes Deployment.
+- The Rollout is configured with a `blueGreen` strategy.
+- `activeService` is the live service.
+- `previewService` is the internal preview service.
+- `autoPromotionEnabled: false` requires explicit promotion.
+
+This supports a robust release model:
+- New versions are deployed to the preview service first.
+- The preview environment can be tested independently.
+- Promotion is performed through Argo Rollouts or via GitOps path switching.
+
+The production overlay patches the Rollout image, which supports immutable image updates and safe rollout management.
+
+
+9. Application details
+-----------------------
+The deployable application is a Python currency conversion service.
+- It exposes a currency converter interface.
+- The service consumes an API key secret and queries an external currency conversion API.
+- It serves traffic on port `5555`.
+
+The app is presented in the repo as a deployable Python web service with UI templates. For resume-level description, it can be described as a Python Streamlit-style user-facing currency converter application that is deployed through a mature DevOps pipeline.
+
+The application itself is used as a target for the DevOps pipeline, while the implementation focus is squarely on the deployment automation, not on application feature development.
+
+
+10. Deployment architecture and flow
+-------------------------------------
+The full flow from scratch is:
+1. GitHub Actions runs the Terraform workflow to provision the AWS VPC, NAT, subnets, EKS cluster, and node group.
+2. The infrastructure Terraform state is managed in S3 with DynamoDB locking.
+3. The deployment workflow connects to the EKS cluster and prepares AWS IAM and Kubernetes resources.
+4. The AWS Load Balancer Controller is installed with IRSA, providing ALB ingress capability.
+5. Argo Rollouts controller is installed to manage progressive delivery and blue/green releases.
+6. ArgoCD is installed and configured as a self-managed GitOps controller.
+7. ArgoCD applications are applied, pointing to the repository path for the currency converter production overlay.
+8. The application rollout is deployed using blue/green strategy.
+9. Promotion and production switching are managed via GitHub Actions and Argo Rollouts.
+
+This creates a complete automated CI/CD pipeline with infrastructure provisioning, environment configuration, application deployment, and release control.
+
+
+11. Skaffold + ArgoCD design intent
+------------------------------------
+The branch is architected to support a Skaffold + ArgoCD workflow:
+- Skaffold is the local developer-facing build/deploy layer that can build container images and deploy manifests rapidly during development.
+- ArgoCD is the production GitOps layer that watches Git and reconciles cluster state continuously.
+
+Although the repo does not yet include an explicit `skaffold.yaml` file, the manifest and image structure are designed for easy Skaffold integration. This means the repo is ready for local developer workflows where Skaffold can build the image, apply Kubernetes manifests, and then ArgoCD can continue to manage production state.
+
+This combination is a powerful DevOps pattern: local fast feedback with Skaffold and production reliability with ArgoCD.
+
+
+12. Resume-ready DevOps highlights
+----------------------------------
+- Architected and implemented end-to-end AWS infrastructure automation using Terraform for VPC, EKS, NAT, and IAM.
+- Designed EKS cluster bootstrap and RBAC mapping logic to ensure cluster creator admin access through `aws-auth` ConfigMap.
+- Built cluster-level deployment automation using GitHub Actions to install the AWS Load Balancer Controller, associate OIDC, and create IRSA.
+- Implemented ArgoCD GitOps to declare production and ArgoCD application state in Git with automated sync, self-healing, and pruning.
+- Developed an Argo Rollouts blue/green deployment model with separate active and preview services.
+- Automated release promotion with GitHub Actions workflows for deployment switching and Argo Rollouts promotion.
+- Added Terraform state unlock automation to recover from stuck state locks in CI.
+- Designed the repository for Skaffold + ArgoCD integration to support both local developer loops and production-grade GitOps.
+
+This branch represents a mature DevOps implementation that spans infrastructure, cluster orchestration, GitOps delivery, traffic management, and CI/CD automation.
