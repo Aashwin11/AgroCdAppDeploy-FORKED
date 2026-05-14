@@ -1,4 +1,4 @@
-frontend:
+
 # Build Stage
 FROM node:18-alpine AS builder
 

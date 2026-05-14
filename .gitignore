@@ -50,5 +50,6 @@ awscliv2.zip
 venv/
 venv/*
 */venv/*
+skaffold.exe
 
 

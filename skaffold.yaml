@@ -1,0 +1,24 @@
+apiVersion: skaffold/v4beta7
+kind: Config
+metadata:
+  name: agrocd-microservices
+
+build:
+  artifacts:
+    # 1. Frontend Build Config
+    - image: 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566/ashwin11-microservice-app-frontend-ecr
+      context: services/frontend
+      docker:
+        dockerfile: Dockerfile
+
+    #2. Backend build config
+    - image: 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566/ashwin11-microservice-app-backend-ecr
+      context: services/backend
+      docker:
+        dockerfile: Dockerfile
+
+# 3. Kustomize Patching
+manifests:
+  kustomize:
+    paths:
+      - k8s-kustomize/overlays/production
