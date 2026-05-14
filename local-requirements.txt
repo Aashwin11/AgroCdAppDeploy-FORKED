@@ -1,4 +1,7 @@
 asn1crypto==1.5.1
+awscli-local==0.22.2
+boto3==1.43.7
+botocore==1.43.7
 cachetools==7.1.1
 certifi==2026.4.22
 cffi==2.0.0
@@ -10,7 +13,9 @@ dnslib==0.9.26
 dnspython==2.8.0
 docker==7.1.0
 idna==3.15
+jmespath==1.1.0
 localstack==2026.4.0
+localstack-client==2.11
 markdown-it-py==4.2.0
 mdurl==0.1.2
 packaging==26.2
@@ -26,6 +31,7 @@ pywin32==311
 PyYAML==6.0.3
 requests==2.34.1
 rich==15.0.0
+s3transfer==0.17.0
 semver==3.0.4
 six==1.17.0
 tabulate==0.10.0
