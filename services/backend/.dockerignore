@@ -1,0 +1,21 @@
+# Ignore frontend files
+frontend/
+frontend/*
+
+# Ignore virtual environment
+venv/
+env/
+telusko-fastapi-env/
+telusko-fastapi-env/*
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore Git
+.git/
+
+# Ignore IDE files
+.vscode/
+.idea/

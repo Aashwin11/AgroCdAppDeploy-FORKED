@@ -47,3 +47,8 @@ awscliv2.zip
 
 # Logs
 *.log
+venv/
+venv/*
+*/venv/*
+
+

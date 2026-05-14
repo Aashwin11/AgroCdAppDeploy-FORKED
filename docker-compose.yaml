@@ -1,0 +1,10 @@
+# Correct — no ECR port range on the floci service
+services:
+  floci:
+    image: floci/floci:latest
+    ports:
+      - "4566:4566"
+      - "6379-6399:6379-6399"   # ElastiCache
+      - "7001-7099:7001-7099"   # RDS
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock

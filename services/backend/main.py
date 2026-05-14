@@ -1,3 +1,5 @@
+
+
 from fastapi import Depends, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 #from library_name import class_name
@@ -11,7 +13,7 @@ from sqlalchemy.orm import Session
 app_fastapi=FastAPI()
 app_fastapi.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
     allow_methods=["*"]
                            )
 
@@ -40,7 +42,7 @@ def get_db():
 
 def init_db():
     db=session()
-    count=db.query(database_models.Product).count
+    count=db.query(database_models.Product).count()
     if count==0:
         for product in products:
         
@@ -107,6 +109,8 @@ def delete_product(id: int, db: Session=Depends(get_db)):
         return f" Removed from DB"
     else:
         return "Product not found"            
+
+
 
 
 

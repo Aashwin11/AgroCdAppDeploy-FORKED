@@ -1,10 +1,12 @@
+
+
 import React, { useEffect, useState, useMemo } from "react";
 import axios from "axios";
 import "./App.css";
 import TaglineSection from "./TaglineSection";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000",
+  baseURL: "/api",
 });
 
 function App() {
@@ -47,7 +49,8 @@ function App() {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const res = await api.get("/products/");
+      const res = await api.get("/products"); // Removed trailing slash
+      console.log("Backend response:", res.data); // Added log
       setProducts(res.data);
       setError("");
     } catch (err) {
@@ -61,7 +64,8 @@ function App() {
     const run = async () => {
       setLoading(true);
       try {
-        const res = await api.get("/products/");
+        const res = await api.get("/products"); // Removed trailing slash
+        console.log("Backend response:", res.data); // Added log
         setProducts(res.data);
         setError("");
       } catch (err) {
@@ -84,12 +88,13 @@ function App() {
 
   // Derived list with filter and sorting
   const filteredProducts = useMemo(() => {
-    let filtered = products;
+    // Safety check added here
+    let filtered = Array.isArray(products) ? products : [];
     
     // Apply filter
     const q = filter.trim().toLowerCase();
     if (q) {
-      filtered = products.filter((p) =>
+      filtered = filtered.filter((p) =>
         String(p.id).includes(q) ||
         p.name?.toLowerCase().includes(q) ||
         p.description?.toLowerCase().includes(q)
@@ -144,7 +149,7 @@ function App() {
         });
         setMessage("Product updated successfully");
       } else {
-        await api.post("/products/", {
+        await api.post("/products", { // Removed trailing slash
           ...form,
           id: Number(form.id),
           price: Number(form.price),
@@ -210,7 +215,7 @@ function App() {
 
       <div className="container">
         <div className="stats">
-          <div className="chip">Total: {products.length}</div>
+          <div className="chip">Total: {Array.isArray(products) ? products.length : 0}</div>
           <div className="search">
             <input
               type="text"
@@ -370,3 +375,5 @@ function App() {
 }
 
 export default App;
+
+
