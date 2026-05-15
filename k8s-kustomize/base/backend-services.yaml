@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-active-svc
+spec:
+  ports:
+    - port: 80
+      targetPort: 8000
+  selector:
+    app: backend
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend-preview-svc
+spec:
+  ports:
+    - port: 80
+      targetPort: 8000
+  selector:
+    app: backend

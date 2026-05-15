@@ -1,0 +1,52 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Rollout
+metadata:
+  name: backend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: backend-image
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: backend-secret
+
+          resources:
+            requests:
+              cpu: "100m" # Guaranteed 1/10th of a CPU core
+              memory: "128Mi" # Guaranteed baseline memory
+            limits:
+              cpu: "500m" # Hard cap at 1/2 of a CPU core
+              memory: "256Mi" # Hard cap; pod is OOMKilled if it exceeds this
+
+          # Liveness: If this fails, K8s restarts the Pod (catches deadlocks)
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 15
+
+          # Readiness: If this fails, K8s removes it from the Service load balancer
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+  strategy:
+    blueGreen:
+      activeService: backend-active-svc
+      previewService: backend-preview-svc
+      autoPromotionEnabled: false

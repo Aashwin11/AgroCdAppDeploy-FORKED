@@ -1,7 +1,0 @@
-resources:
-- rollout.yaml
-- active-service.yaml
-- preview-service.yaml
-- ingress.yaml
-- preview-ingress.yaml 
-- secret.yaml
