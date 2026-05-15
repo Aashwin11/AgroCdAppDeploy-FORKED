@@ -1,7 +1,0 @@
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: backend-config
-data:
-  # This injects your LocalStack RDS URL directly into FastAPI
-  DATABASE_URL: "postgresql://postgres:postgres@localhost:5432/Fastapi_db_table"
