@@ -21,4 +21,6 @@ build:
 manifests:
   kustomize:
     paths:
-      - k8s-kustomize/overlays/production
+      # Skaffold now patches both pipelines independently
+      - k8s-kustomize/frontend/overlays/development
+      - k8s-kustomize/backend/overlays/development
