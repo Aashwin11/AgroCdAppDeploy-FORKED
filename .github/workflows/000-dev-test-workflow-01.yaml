@@ -1,0 +1,16 @@
+name: Manual Message Display
+
+on:
+  workflow_dispatch:
+    inputs:
+      user_message:
+        description: "Enter your message"
+        required: true
+        default: "Hello, World!"
+
+jobs:
+  display:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show the message
+        run: "echo The user said: ${{ github.event.inputs.user_message }}"

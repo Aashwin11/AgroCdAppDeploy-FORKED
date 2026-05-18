@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: argocd-platform
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/Aashwin11/AgroCdAppDeploy-FORKED.git"
+    targetRevision: argocd-ai-BRANCH
+    # STRICT BOUNDARY: It only watches the system-config folder
+    path: argocd/system-config
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
