@@ -1,0 +1,11 @@
+{
+  "inputs": {
+    "action": "destroy",
+    "aws_region": "us-east-1",
+    "project_name": "local-eks-demo",
+    "instance_types": "t3.medium",
+    "cluster_version": "1.30",
+    "tf_state_bucket": "ashwin11-microservice-app-s3",
+    "tf_lock_table": "ashwin11-microservice-app-dynamo-db"
+  }
+}

@@ -1,0 +1,141 @@
+name: "1-LOCALSTACK Terraform EKS Deploy"
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Action to perform"
+        required: true
+        type: choice
+        options:
+          - apply
+          - destroy
+        default: "apply"
+      aws_region:
+        description: "AWS Region"
+        required: true
+        default: "us-east-1" # Updated to match your LocalStack region
+      project_name:
+        description: "Unique Project Name"
+        required: true
+        default: "local-eks-demo"
+      instance_types:
+        description: "Select the instance"
+        required: true
+        default: "t3.medium"
+      cluster_version:
+        description: "EKS Kubernetes Version"
+        required: true
+        default: "1.30"
+      # Updated to match the LocalStack resources we just provisioned
+      tf_state_bucket:
+        description: "S3 bucket for Terraform state"
+        required: true
+        default: "ashwin11-microservice-app-s3"
+      tf_lock_table:
+        description: "DynamoDB table for state locking"
+        required: true
+        default: "ashwin11-microservice-app-dynamo-db"
+
+jobs:
+  terraform:
+    name: "Terraform Execution (LocalStack)"
+    runs-on: ubuntu-latest
+
+    # Inject dummy credentials from your .secrets file globally for all steps in this job
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ github.event.inputs.aws_region }}
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: ./infrastructure
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # REMOVED: aws-actions/configure-aws-credentials@v4
+      # Why: The official AWS action attempts to ping real AWS STS servers to validate the credentials.
+      # Since we are using dummy keys for LocalStack, that step will immediately crash.
+      # Global env vars (above) handle this safely instead.
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.5
+          # Disabling the wrapper prevents other common 'act' output bugs
+          terraform_wrapper: false
+
+      # NEW STEP: Fixes the Windows -> Docker permission stripping bug
+      - name: Fix Terraform Permissions (Act Windows Bug)
+        run: chmod +x $(which terraform)
+
+        #Install AWS CLI
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install || ./aws/install
+
+      - name: Terraform Init
+        id: init
+        run: |
+          # Initializes Terraform with backend configuration routed strictly to LocalStack
+          terraform init \
+            -backend-config="bucket=${{ github.event.inputs.tf_state_bucket }}" \
+            -backend-config="key=staging/${{ github.event.inputs.project_name }}/terraform.tfstate" \
+            -backend-config="region=${{ github.event.inputs.aws_region }}" \
+            -backend-config="dynamodb_table=${{ github.event.inputs.tf_lock_table }}" \
+            -backend-config="endpoint=http://host.docker.internal:4566" \
+            -backend-config="sts_endpoint=http://host.docker.internal:4566" \
+            -backend-config="dynamodb_endpoint=http://host.docker.internal:4566" \
+            -backend-config="skip_credentials_validation=true" \
+            -backend-config="skip_metadata_api_check=true" \
+            -backend-config="skip_region_validation=true" \
+            -backend-config="use_path_style=true"
+
+      - name: Create tfvars.json file
+        id: create_tfvars
+        run: |
+          # CRITICAL LOCALSTACK FIX: 
+          # LocalStack's simulated STS often returns an ARN without a forward slash (e.g., arn:aws:iam::00000:root).
+          # Your main.tf uses `split("/", var.cluster_creator_arn)[1]`, which crashes if there is no slash.
+          # We hardcode a valid dummy ARN format here to ensure the Terraform split function succeeds.
+          CREATOR_ARN="arn:aws:iam::000000000000:user/local-admin"
+          echo "Workflow is running with simulated ARN: $CREATOR_ARN"
+
+          # tfvars JSON file 
+          cat <<EOF > my-vars.tfvars.json
+          {
+            "aws_region": "${{ github.event.inputs.aws_region }}",
+            "project_name": "${{ github.event.inputs.project_name }}",
+            "cluster_version": "${{ github.event.inputs.cluster_version }}",
+            "instance_types": ["${{ github.event.inputs.instance_types }}"],
+            "cluster_creator_arn": "$CREATOR_ARN"
+          }
+          EOF
+
+          # DUMMY ECHO of tfvars
+          echo "--- Verifying my-vars.tfvars.json content ---"
+          cat my-vars.tfvars.json
+          echo "---------------------------------------------"
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+
+      # --- APPLY LOGIC ---
+      - name: Terraform Plan and Apply
+        if: github.event.inputs.action == 'apply'
+        run: |
+          terraform plan -input=false -out=tfplan -var-file="my-vars.tfvars.json"
+          terraform apply -auto-approve -input=false tfplan
+
+      # --- DESTROY LOGIC ---
+      - name: Terraform Destroy
+        if: github.event.inputs.action == 'destroy'
+        run: |
+          terraform destroy -auto-approve -input=false -var-file="my-vars.tfvars.json"
