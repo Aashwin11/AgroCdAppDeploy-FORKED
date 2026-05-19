@@ -6,5 +6,5 @@ resources:
 
 images:
   - name: frontend-image
-    newName: 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566/ashwin11-microservice-app-frontend-ecr
+    newName: localhost:4566/ashwin11-microservice-app-frontend-ecr
     newTag: d60eed1d
