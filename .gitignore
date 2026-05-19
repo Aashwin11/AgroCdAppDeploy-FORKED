@@ -55,3 +55,6 @@ skaffold.exe
 
 docker-compose.yamllocalstack-data/
 localstack-data/
+
+
+localstack-data/*
