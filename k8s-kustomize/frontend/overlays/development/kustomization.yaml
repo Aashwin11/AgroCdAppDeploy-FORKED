@@ -10,5 +10,5 @@ resources:
 #     newTag: latest
 images:
   - name: frontend-image
-    newName: nginx
+    newName: host.docker.internal:4566/000000000000/ashwin11-microservice-app-frontend-ecr
     newTag: alpine
