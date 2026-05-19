@@ -11,7 +11,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: app.trialphase.shop:4566
+    - host: app.trialphase.shop
       http:
         paths:
           - path: /
@@ -35,7 +35,7 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: appdev.trialphase.shop:4566
+    - host: appdev.trialphase.shop
       http:
         paths:
           - path: /
