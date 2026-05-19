@@ -53,4 +53,5 @@ venv/*
 skaffold.exe
 
 
-docker-compose.yaml
+docker-compose.yamllocalstack-data/
+localstack-data/

@@ -7,10 +7,11 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     # MATCHED TO ARGOCD FOR COST SAVINGS
     alb.ingress.kubernetes.io/group.name: shared-ingress-group
+    external-dns.alpha.kubernetes.io/hostname: app.trialphase.shop
 spec:
   ingressClassName: alb
   rules:
-    - host: app.trialphase.shop
+    - host: app.trialphase.shop:4566
       http:
         paths:
           - path: /
@@ -30,10 +31,11 @@ metadata:
     alb.ingress.kubernetes.io/target-type: ip
     # MATCHED TO ARGOCD FOR COST SAVINGS
     alb.ingress.kubernetes.io/group.name: shared-ingress-group
+    external-dns.alpha.kubernetes.io/hostname: appdev.trialphase.shop
 spec:
   ingressClassName: alb
   rules:
-    - host: appdev.trialphase.shop
+    - host: appdev.trialphase.shop:4566
       http:
         paths:
           - path: /

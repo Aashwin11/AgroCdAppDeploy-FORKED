@@ -1,7 +1,7 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Application
 metadata:
-  name: frontend-dev
+  name: backend-dev
   namespace: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
@@ -10,11 +10,11 @@ spec:
   source:
     repoURL: "https://github.com/Aashwin11/AgroCdAppDeploy-FORKED.git"
     targetRevision: argocd-ai-BRANCH
-    path: k8s-kustomize/frontend/overlays/development
+    path: k8s-kustomize/backend/overlays/development
   destination:
     server: "https://kubernetes.default.svc"
-    # INJECTS NAMESPACE INTO ALL FRONTEND YAMLs
-    namespace: microservice-app-frontend
+    # INJECTS NAMESPACE INTO ALL BACKEND YAMLs
+    namespace: microservice-app-backend
   syncPolicy:
     automated:
       prune: true
