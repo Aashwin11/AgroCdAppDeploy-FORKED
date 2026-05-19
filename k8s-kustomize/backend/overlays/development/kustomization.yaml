@@ -7,4 +7,4 @@ resources:
 images:
   - name: backend-image
     newName: 000000000000.dkr.ecr.us-east-1.host.docker.internal:4566/ashwin11-microservice-app-backend-ecr
-    newTag: latest
+    newTag: d60eed1d
