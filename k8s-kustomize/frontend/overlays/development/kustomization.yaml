@@ -6,5 +6,5 @@ resources:
 
 images:
   - name: frontend-image
-    newName: host.docker.internal:4566/000000000000/us-east-1/ashwin11-microservice-app-frontend-ecr
+    newName: host.docker.internal:4566/ashwin11-microservice-app-frontend-ecr
     newTag: d60eed1d
