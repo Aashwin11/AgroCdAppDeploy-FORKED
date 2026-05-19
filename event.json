@@ -1,6 +1,6 @@
 {
   "inputs": {
-    "action": "destroy",
+    "action": "apply",
     "aws_region": "us-east-1",
     "project_name": "local-eks-demo",
     "instance_types": "t3.medium",

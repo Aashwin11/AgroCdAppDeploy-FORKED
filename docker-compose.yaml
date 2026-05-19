@@ -1,10 +1,19 @@
-# Correct — no ECR port range on the floci service
 services:
-  floci:
-    image: floci/floci:latest
+  localstack:
+    container_name: localstack-main
+
+    image: localstack/localstack-pro:latest
+
     ports:
       - "4566:4566"
-      - "6379-6399:6379-6399"   # ElastiCache
-      - "7001-7099:7001-7099"   # RDS
+      - "4510-4559:4510-4559"
+
+    environment:
+      LOCALSTACK_AUTH_TOKEN: "ls-ZOlItiTe-JAKa-dOdU-6283-bEyafIGA2f7b"
+      PERSISTENCE: "1"
+      DEBUG: "1"
+      DOCKER_HOST: "unix:///var/run/docker.sock"
+
     volumes:
+      - ./localstack-data:/var/lib/localstack
       - /var/run/docker.sock:/var/run/docker.sock

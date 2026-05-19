@@ -1,0 +1,23 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: cluster-root
+  namespace: argocd
+  # We use a finalizer to ensure that when we delete this root app,
+  # ArgoCD cascades the deletion and removes all the child apps too.
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: "https://github.com/Aashwin11/AgroCdAppDeploy-FORKED.git"
+    targetRevision: argocd-ai-BRANCH
+
+    path: argocd/apps
+  destination:
+    server: "https://kubernetes.default.svc"
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

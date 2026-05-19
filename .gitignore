@@ -53,3 +53,4 @@ venv/*
 skaffold.exe
 
 
+docker-compose.yaml

@@ -1,0 +1,205 @@
+name: "2-LOCALSTACK Deploy Apps to EKS"
+
+on:
+  workflow_dispatch:
+    inputs:
+      aws_region:
+        description: "AWS Region (e.g., us-east-1)"
+        required: true
+        default: "us-east-1"
+      cluster_name:
+        description: "EKS Cluster Name (e.g., local-eks-demo)"
+        required: true
+        default: "local-eks-demo"
+
+jobs:
+  deploy-to-eks:
+    name: "Deploy ALB Controller and ArgoCD (LocalStack)"
+    runs-on: ubuntu-latest
+
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ github.event.inputs.aws_region }}
+      LOCAL_ENDPOINT: "http://host.docker.internal:4566"
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # Install the AWS CLI manually to avoid the 'executable not found' act error
+      - name: Install AWS CLI
+        run: |
+          curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
+          unzip -q awscliv2.zip
+          sudo ./aws/install || ./aws/install
+
+      - name: Install Argo Rollouts kubectl plugin
+        run: |
+          echo "=========================================="
+          echo "Installing Argo Rollouts CLI"
+          echo "=========================================="
+          curl -sLO https://github.com/argoproj/argo-rollouts/releases/latest/download/kubectl-argo-rollouts-linux-amd64
+          chmod +x ./kubectl-argo-rollouts-linux-amd64
+          sudo mv ./kubectl-argo-rollouts-linux-amd64 /usr/local/bin/kubectl-argo-rollouts
+          echo "Argo Rollouts CLI installed"
+          echo "=========================================="
+
+      #NEW STEP: Install kubectl and Helm (act's barebones container lacks them)
+      - name: Install kubectl and Helm
+        run: |
+          echo "=========================================="
+          echo "Installing kubectl"
+          echo "=========================================="
+          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+          chmod +x ./kubectl
+          sudo mv ./kubectl /usr/local/bin/kubectl
+
+          echo "=========================================="
+          echo "Installing Helm"
+          echo "=========================================="
+          curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+          chmod 700 get_helm.sh
+          ./get_helm.sh || sudo ./get_helm.sh
+      # -----------------------------------------------------------------------------------
+      # 1. Connect to the EKS Cluster
+      # -----------------------------------------------------------------------------------
+      - name: Update Kubeconfig
+        run: |
+          echo "=========================================="
+          echo "Connecting to Local EKS Cluster"
+          echo "=========================================="
+
+          # TRAPPED IN LOCALSTACK: Generates the local kubeconfig
+          aws --endpoint-url=$LOCAL_ENDPOINT eks update-kubeconfig \
+            --region ${{ github.event.inputs.aws_region }} \
+            --name ${{ github.event.inputs.cluster_name }}
+
+          echo "Checking cluster nodes:"
+          kubectl get nodes -o wide
+          echo "=========================================="
+
+      # -----------------------------------------------------------------------------------
+      # 2. Simulated IAM Role for ALB Controller
+      # -----------------------------------------------------------------------------------
+      - name: Create Simulated IAM Role for ALB Controller
+        id: ensure_policy
+        run: |
+          echo "=========================================="
+          echo "Creating Simulated IAM Role for LocalStack"
+          echo "=========================================="
+          POLICY_NAME="AWSLoadBalancerControllerIAMPolicy"
+          ROLE_NAME="AmazonEKSLoadBalancerControllerRole-${{ github.event.inputs.cluster_name }}"
+
+          # Create a dummy assume role policy document
+          cat <<EOF > trust-policy.json
+          {
+            "Version": "2012-10-17",
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Principal": { "Service": "eks.amazonaws.com" },
+                "Action": "sts:AssumeRole"
+              }
+            ]
+          }
+          EOF
+
+          # Create Role in LocalStack
+          aws --endpoint-url=$LOCAL_ENDPOINT iam create-role --role-name $ROLE_NAME --assume-role-policy-document file://trust-policy.json || echo "Role exists"
+          ROLE_ARN=$(aws --endpoint-url=$LOCAL_ENDPOINT iam get-role --role-name $ROLE_NAME --query 'Role.Arn' --output text)
+
+          echo "role_arn=$ROLE_ARN" >> "$GITHUB_OUTPUT"
+          echo "Simulated Role ARN: $ROLE_ARN"
+          echo "=========================================="
+          sleep 3
+
+      # -----------------------------------------------------------------------------------
+      # 3. Install Argo Rollouts Controller
+      # -----------------------------------------------------------------------------------
+      - name: Install Argo Rollouts Controller
+        run: |
+          echo "=========================================="
+          echo "Installing Argo Rollouts Controller"
+          echo "=========================================="
+          kubectl create namespace argo-rollouts || true
+          kubectl apply -n argo-rollouts -f https://github.com/argoproj/argo-rollouts/releases/latest/download/install.yaml
+          echo "Waiting for Rollouts controller to be ready..."
+          kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=argo-rollouts -n argo-rollouts --timeout=300s
+          echo "=========================================="
+
+      # -----------------------------------------------------------------------------------
+      # 4. Install AWS Load Balancer Controller
+      # -----------------------------------------------------------------------------------
+      - name: Install AWS Load Balancer Controller
+        env:
+          ROLE_ARN: ${{ steps.ensure_policy.outputs.role_arn }}
+        run: |
+          echo "=========================================="
+          echo "Installing AWS Load Balancer Controller via Helm"
+          echo "=========================================="
+
+          VPC_ID=$(aws --endpoint-url=$LOCAL_ENDPOINT eks describe-cluster --name ${{ github.event.inputs.cluster_name }} --query "cluster.resourcesVpcConfig.vpcId" --output text)
+          echo "Using VPC ID: $VPC_ID"
+
+          helm repo add eks https://aws.github.io/eks-charts
+          helm repo update
+
+          # In LocalStack, we attach the simulated Role ARN directly via Helm annotations
+          helm upgrade --install aws-load-balancer-controller eks/aws-load-balancer-controller \
+            --namespace kube-system \
+            --set clusterName=${{ github.event.inputs.cluster_name }} \
+            --set serviceAccount.create=true \
+            --set serviceAccount.name=aws-load-balancer-controller \
+            --set serviceAccount.annotations."eks\.amazonaws\.com/role-arn"=$ROLE_ARN \
+            --set vpcId=$VPC_ID \
+            --set region=${{ github.event.inputs.aws_region }} \
+            --set enableServiceMutatorWebhook=false
+
+          echo "Waiting 20 seconds for controller to deploy..."
+          sleep 20
+          kubectl get pods -n kube-system -l app.kubernetes.io/name=aws-load-balancer-controller
+          echo "=========================================="
+
+      # -----------------------------------------------------------------------------------
+      # 5. Install ArgoCD
+      # -----------------------------------------------------------------------------------
+      - name: Install ArgoCD
+        run: |
+          echo "=========================================="
+          echo "Installing ArgoCD"
+          echo "=========================================="
+
+          helm repo add argo https://argoproj.github.io/argo-helm
+          helm repo update
+
+          helm upgrade --install argocd argo/argo-cd \
+            --namespace argocd \
+            --create-namespace \
+            --set server.service.type=ClusterIP \
+            --set server.extraArgs={--insecure}
+
+          echo "Waiting 30 seconds for ArgoCD pods to start..."
+          sleep 30
+          kubectl get pods -n argocd
+          echo "=========================================="
+
+      # -----------------------------------------------------------------------------------
+      # 6. Apply Core Cluster Manifests & App of Apps
+      # -----------------------------------------------------------------------------------
+      - name: Spark the GitOps Pipeline
+        run: |
+          echo "=========================================="
+          echo "Applying the App of Apps Architecture"
+          echo "=========================================="
+
+          # 1. Apply the ArgoCD server ingress first (from your manifests folder)
+          # Note: Ensure this file path matches your repository structure!
+          kubectl apply -f kubernetes-manifests/argocd-ingress.yaml || echo "Could not find argocd-ingress.yaml"
+
+          # 2. Trigger the Root App! (This replaces 'kubectl apply -f argocd/')
+          # This single file tells ArgoCD to deploy your frontend, backend, and platform settings.
+          kubectl apply -f argocd/root-app.yaml
+
+          echo "---> GitOps Pipeline Sparked!"
+          echo "=========================================="
