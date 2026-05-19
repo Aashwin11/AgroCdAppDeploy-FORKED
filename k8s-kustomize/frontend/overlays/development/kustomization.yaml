@@ -6,3 +6,7 @@ resources:
 
 # Skaffold will automatically inject the `images:` block below here.
 
+images:
+  - name: frontend-image
+    newName: 000000000000.dkr.ecr.us-east-1.localhost:4566/ashwin11-microservice-app-frontend-ecr
+    newTag: latest
