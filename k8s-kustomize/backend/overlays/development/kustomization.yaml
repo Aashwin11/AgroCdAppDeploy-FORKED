@@ -4,8 +4,7 @@ kind: Kustomization
 resources:
   - ../../base
 
-# Skaffold will automatically inject the `images:` block below here.
 images:
   - name: backend-image
-    newName: awsls ecr create-repository --repository-name ashwin11-microservice-app-backend-ecr
+    newName: 000000000000.dkr.ecr.us-east-1.localhost:4566/ashwin11-microservice-app-backend-ecr
     newTag: latest
