@@ -95,3 +95,57 @@ resource "kubernetes_config_map_v1" "aws_auth" {
 # Making sure that the eks cluster is created
   depends_on = [module.eks]
 }
+
+
+#RDS
+# --- Security Group for RDS ---
+resource "aws_security_group" "rds_sg" {
+  name        = "local-rds-postgres-sg"
+  description = "Allow inbound PostgreSQL traffic"
+  
+  # Grabbing the VPC ID from your VPC module
+  vpc_id      = module.vpc.vpc_id 
+
+  ingress {
+    description = "PostgreSQL access"
+    from_port   = 5432
+    to_port     = 5432
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] 
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "rds-security-group"
+  }
+}
+
+# --- RDS Database Module ---
+module "rds_postgres" {
+  source = "./modules/rds"
+
+  environment = "dev"
+  
+  # FIX: Matched your exact VPC module output
+  subnet_ids             = module.vpc.private_subnet_ids 
+  vpc_security_group_ids = [aws_security_group.rds_sg.id]
+
+  # Database Credentials (matches what your backend expects)
+  db_name     = "backenddb"
+  db_username = "dbadmin"
+  db_password = "dbpassword123"
+
+  tags = {
+    Project = "GitOps-Local"
+  }
+}
+
+output "database_endpoint" {
+  value = module.rds_postgres.db_endpoint
+}

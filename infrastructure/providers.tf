@@ -38,6 +38,7 @@ provider "aws" {
     route53        = "http://host.docker.internal:4566"
     secretsmanager = "http://host.docker.internal:4566"
     sts            = "http://host.docker.internal:4566"
+    rds            = "http://localhost:4566"
   }
   # -----------------------------------------------------------------------------------
   # [REAL AWS ENTERPRISE CONFIGURATION] - COMMENT OUT THE BLOCK ABOVE IN PRODUCTION
