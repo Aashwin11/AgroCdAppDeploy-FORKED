@@ -6,5 +6,5 @@ resources:
 
 images:
   - name: frontend-image
-    newName: docker.io/11aashwin/ashwin11-microservice-app-frontend-ecr
+    newName: docker.io/11aashwin/ashwin11-microservice-app-frontend-ec
     newTag: 1d855ab8
