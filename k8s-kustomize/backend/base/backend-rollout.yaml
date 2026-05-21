@@ -17,9 +17,12 @@ spec:
           image: backend-image
           ports:
             - containerPort: 8000
-          envFrom:
-            - secretRef:
-                name: backend-secret
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: backend-db-secret
+                  key: DATABASE_URL
 
           resources:
             requests:

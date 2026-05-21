@@ -12,7 +12,7 @@ build:
         dockerfile: Dockerfile
 
     #2. Backend build config
-    - image: 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566/ashwin11-microservice-app-backend-ecr
+    - image: docker.io/11aashwin/ashwin11-microservice-app-backend-ecr
       context: services/backend
       docker:
         dockerfile: Dockerfile
