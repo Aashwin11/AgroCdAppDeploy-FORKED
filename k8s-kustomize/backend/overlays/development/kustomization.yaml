@@ -13,3 +13,6 @@ secretGenerator:
   - name: backend-db-secret
     literals:
       - DATABASE_URL=postgresql://dbadmin:dbpassword123@host.docker.internal:4511/backenddb
+
+generatorOptions:
+  disableNameSuffixHash: true
