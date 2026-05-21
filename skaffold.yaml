@@ -6,7 +6,7 @@ metadata:
 build:
   artifacts:
     # 1. Frontend Build Config
-    - image: 000000000000.dkr.ecr.us-east-1.localhost.localstack.cloud:4566/ashwin11-microservice-app-frontend-ecr
+    - image: docker.io/11aashwin/ashwin11-microservice-app-frontend-ec
       context: services/frontend
       docker:
         dockerfile: Dockerfile

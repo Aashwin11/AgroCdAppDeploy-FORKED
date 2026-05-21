@@ -7,4 +7,4 @@ resources:
 images:
   - name: frontend-image
     newName: localhost:4566/ashwin11-microservice-app-frontend-ecr
-    newTag: d60eed1d
+    newTag: 1d855ab8
